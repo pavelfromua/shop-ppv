@@ -5,16 +5,10 @@ import internetshop.db.Storage;
 import internetshop.lib.Dao;
 import internetshop.model.Product;
 import internetshop.model.ShoppingCart;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import org.apache.log4j.Logger;
 
 @Dao
 public class ShoppingCartDaoImpl implements ShoppingCartDao {
-    static final Logger logger = Logger.getLogger(ShoppingCartDaoImpl.class);
-
     @Override
     public ShoppingCart create(ShoppingCart shoppingCart) {
         Storage.addShoppingCart(shoppingCart);
@@ -23,56 +17,63 @@ public class ShoppingCartDaoImpl implements ShoppingCartDao {
     }
 
     @Override
-    public Optional<ShoppingCart> get(Long id) {
-        return Storage.shoppingCarts.stream().filter(s -> s.getId() == id).findFirst();
-    }
+    public ShoppingCart addProduct(ShoppingCart shoppingCart, Product product) {
+        ShoppingCart shoppingCartToAddProduct = getByUserId(shoppingCart.getUserId()).get();
 
-    @Override
-    public List<ShoppingCart> getAll() {
-        return Storage.shoppingCarts.stream().collect(Collectors.toList());
-    }
+        if (shoppingCartToAddProduct != null) {
+            Storage.shoppingCarts.stream().filter(s -> s.equals(shoppingCartToAddProduct))
+                    .forEach(s -> s.getProducts().add(product));
 
-    @Override
-    public ShoppingCart update(ShoppingCart shoppingCart) {
-        Storage.shoppingCarts.stream().filter(s -> s.getId() == shoppingCart.getId())
-                .forEach(s -> {
-                    List<Product> list = new ArrayList<>();
-                    for (Product product: shoppingCart.getProducts()) {
-                        list.add(product);
-                    }
-                    s.setProducts(list);
-                });
-
-        try {
-            ShoppingCart obj = get(shoppingCart.getId()).get();
-            if (obj == null) {
-                logger.info("Shopping cart by " + shoppingCart.getId()
-                        + "isn't gotten from db");
-                return shoppingCart;
-            } else {
-                logger.info(obj + " is cloned");
-                return obj.clone();
-            }
-        } catch (CloneNotSupportedException e) {
-            logger.error("This is error : " + e.getMessage());
+            return shoppingCartToAddProduct;
+        } else {
             return shoppingCart;
         }
     }
 
     @Override
-    public boolean delete(Long id) {
-        return Storage.shoppingCarts.removeIf(s -> s.getId() == id);
+    public boolean deleteProduct(ShoppingCart shoppingCart, Product product) {
+        ShoppingCart shoppingCartToDeleteProduct = getByUserId(shoppingCart.getUserId()).get();
+
+        if (shoppingCartToDeleteProduct != null) {
+            int countOfProductsBefore = shoppingCartToDeleteProduct.getProducts().size();
+
+            Storage.shoppingCarts.stream().filter(s -> s.equals(shoppingCartToDeleteProduct))
+                    .forEach(s -> s.getProducts().removeIf(p -> p.getId() == product.getId()));
+
+            ShoppingCart shoppingCartAfterDeleteProduct = getByUserId(shoppingCart
+                    .getUserId()).get();
+            int countOfProductsAfter = shoppingCartAfterDeleteProduct.getProducts().size();
+
+            return countOfProductsAfter == countOfProductsBefore ? false : true;
+        } else {
+            return false;
+        }
     }
 
     @Override
     public void clear(ShoppingCart shoppingCart) {
-        Storage.shoppingCarts.stream().filter(s -> s.getId() == shoppingCart.getId())
-                .forEach(s -> s.getProducts().clear());
+        ShoppingCart shoppingToClear = getByUserId(shoppingCart.getUserId()).get();
 
+        if (shoppingToClear != null) {
+            Storage.shoppingCarts.stream().filter(s -> s.equals(shoppingToClear))
+                    .forEach(s -> s.getProducts().clear());
+        }
     }
 
     @Override
     public Optional<ShoppingCart> getByUserId(Long userId) {
-        return Storage.shoppingCarts.stream().filter(s -> s.getUserId() == userId).findFirst();
+        return Optional.ofNullable(Storage.shoppingCarts.stream()
+                .filter(s -> s.getUserId() == userId).findFirst().orElse(null));
+    }
+
+    @Override
+    public boolean delete(ShoppingCart shoppingCart) {
+        ShoppingCart shoppingToDelete = getByUserId(shoppingCart.getUserId()).get();
+
+        if (shoppingToDelete != null) {
+            return Storage.shoppingCarts.removeIf(s -> s.equals(shoppingToDelete));
+        } else {
+            return false;
+        }
     }
 }

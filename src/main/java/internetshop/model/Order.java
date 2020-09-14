@@ -1,9 +1,8 @@
 package internetshop.model;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class Order implements Cloneable {
+public class Order {
     private Long id;
     private List<Product> products;
     private Long userId;
@@ -35,27 +34,5 @@ public class Order implements Cloneable {
 
     public Long getUserId() {
         return userId;
-    }
-
-    @Override
-    public String toString() {
-        return "Order{"
-                + "id=" + id
-                + ", products=" + products
-                + ", userId=" + userId
-                + '}';
-    }
-
-    @Override
-    public Order clone() throws CloneNotSupportedException {
-        List<Product> productsClone = new ArrayList<Product>(products.size());
-        for (Product product: products) {
-            productsClone.add(product);
-        }
-
-        Order order = new Order(productsClone, userId);
-        order.setId(id);
-
-        return order;
     }
 }
